@@ -1,6 +1,6 @@
 ## AWS DevSecOps Pipeline
 
-DevSecOps pipeline using AWS cloudnative services and open source security vulnerability scanning tools.
+DevSecOps pipeline using AWS cloud native services and open source security vulnerability scanning tools.
 
 ![CodeBuild badge](https://codebuild.us-west-2.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoieDJkVmY0VXl2bVRjaFdBYkRzZExTNS9ZTUZVQXE4Sy9GMkh1dk1sOE54VkJKcEowOGdXcnJiZDlGL1RGeXJGUmR5UHlWT1psaks2N1dKbk5qUSt6L1BnPSIsIml2UGFyYW1ldGVyU3BlYyI6InhST3ZVeEZ6bkxLWC9IZG4iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 
@@ -8,7 +8,7 @@ This DevSecOps pipeline uses AWS DevOps tools CodeBuild, AWS CodeCommit, AWS Cod
 
 ### Build and Test: 
 
-The buildspecs and property files for vulnerability scanning using AWS CodeBuild:
+AWS Buildspec and property files for security vulnerability scanning:
 * buildspec-owasp-depedency-check.yml: buildspec file to perform SCA analysis using OWASP Dependency-Check.
 * buildspec-sonarqube.yml: buildspec file to perform SAST analysis using SonarQube.
 * buildspec-phpstan.yml: buildspec file to perform SAST analysis using PHPStan. This opensource tool is only applicable for scanning PHP application.
@@ -19,17 +19,18 @@ The buildspecs and property files for vulnerability scanning using AWS CodeBuild
 
 ### Lambda files:
 
-AWS lambda is used to parse the scanning analysis results and post it to AWS Security Hub
-* import_findings_security_hub.py: to parse the scanning results, extract the vulnerability details.
-* securityhub.py: to post the vulnerability details to AWS Security Hub in ASFF format (AWS Security Finding Format) .
+AWS lambda is used to parse the security scanning results and post them to AWS Security Hub
+* import_findings_security_hub.py: to parse the scanning results and extract the vulnerability details.
+* securityhub.py: to post the vulnerability details to AWS Security Hub in ASFF format (AWS Security Finding Format).
 
 ### CloudFormation for Pipeline:
 
-* codepipeline-template.yml: CloudFormation template to deploy the DevSecOps Pipeline 
+* codepipeline-template.yml: CloudFormation template to deploy DevSecOps CICD Pipeline 
 
 ## Deploying pipeline:
+Download the CloudFormation template and pipeline code from GitHub repo.
 
-1.	Log in to your AWS account if you have not done so already. Choose the CloudFormation service from the menu and select Launch Stack to launch the AWS CloudFormation console. Select the prepopulated AWS    CloudFormation pipeline template. Choose Next.
+1.	Log in to your AWS account if you have not done so already. Choose the CloudFormation service from the menu and select Launch Stack to launch the AWS CloudFormation console. Select the provided AWS CloudFormation pipeline template. Choose Next.
 2.	Fill in the stack parameter as shown below (Figure 2 and Figure 3).
 3.	Provide Code details, such as repository name and the branch to trigger the pipeline.
 4.	Select the SAST tool (SonarQube or PHPStan) for code analysis, enter API Token, and the SAST tool URL. You can skip SonarQube details if PHPStan is selected as SAST tool.
