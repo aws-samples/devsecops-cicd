@@ -1,0 +1,37 @@
+##Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+##SPDX-License-Identifier: MIT-0
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      php: 7.3
+    commands:
+      - echo "installing phpstan"
+      - composer require --dev
+      - echo "completed installing phpstan"
+  build:
+    commands:
+      - vendor/bin/phpstan analyse $CODEBUILD_SRC_DIR -c $CODEBUILD_SRC_DIR/phpstan.neon --error-format=json --level=1 --memory-limit=2G --xdebug > vendor/phpstan-results.json
+      - echo "phpstan scan completed. Analysing the results......"
+  post_build:
+    commands:
+      - phpstan_fileerrors=$(cat vendor/phpstan-results.json | jq -r '.totals.file_errors')
+      - echo "phpstan errors count is "  $phpstan_fileerrors
+      - | 
+        if [ $phpstan_fileerrors -gt 0 ]; then      
+          jq \
+          "{ \"messageType\": \"CodeScanReport\", \"reportType\": \"PHPStan\", \
+          \"createdAt\": $(date +\"%Y-%m-%dT%H:%M:%S.%3NZ\"), \"source_repository\": env.CODEBUILD_SOURCE_REPO_URL", \
+          \"source_branch\": env.CODEBUILD_SOURCE_VERSION, \
+          \"build_id\": env.CODEBUILD_BUILD_ID, \
+          \"source_commitid\": env.CODEBUILD_RESOLVED_SOURCE_VERSION, \
+          \"report\": . }" vendor/phpstan-results.json > payload.json
+          echo "There are some errors/vulnerabilities reported in the phpstan scan. Stopping the build process.";
+          aws lambda invoke --function-name ImportVulToSecurityHub --payload file://payload.json phpstan_scan_report.json && echo "LAMBDA_SUCCEDED" || echo "LAMBDA_FAILED";
+          echo " completed gathering the phpstan report";
+        else
+          echo "no vulnerabilities found in phpstan scan"
+        fi      
+artifacts:
+  type: zip
+  files: '**/*'

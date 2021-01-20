@@ -1,0 +1,38 @@
+##Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+##SPDX-License-Identifier: MIT-0
+version: 0.2
+phases:
+  install:
+    commands:
+      - echo "install phase....."
+  pre_build:
+    commands:
+      - composer install
+      - wget https://github.com/jeremylong/DependencyCheck/releases/download/v6.0.5/dependency-check-6.0.5-release.zip
+      - unzip dependency-check-6.0.5-release.zip
+      - chmod -R 775 $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh
+      - echo "stage pre_build completed"
+  build:
+    commands: 
+      - cd dependency-check/bin
+      - $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh --project "wordpress" --format JSON --prettyPrint --enableExperimental --scan $CODEBUILD_SRC_DIR --exclude '$CODEBUILD_SRC_DIR/depedency-check/'
+      - echo "OWASP dependency check analysis status is completed..."; 
+      - high_risk_dependency=$( cat dependency-check-report.json | grep -c "HIGHEST" )
+  post_build:
+    commands:
+      - | 
+        jq "{ \"messageType\": \"CodeScanReport\", \"reportType\": \"OWASP-Dependency-Check\", \
+        \"createdAt\": $(date +\"%Y-%m-%dT%H:%M:%S.%3NZ\"), \"source_repository\": env.CODEBUILD_SOURCE_REPO_URL, \
+        \"source_branch\": env.CODEBUILD_SOURCE_VERSION, \
+        \"build_id\": env.CODEBUILD_BUILD_ID, \
+        \"source_commitid\": env.CODEBUILD_RESOLVED_SOURCE_VERSION, \
+        \"report\": . }" dependency-check-report.json > payload.json
+      - |
+        if [ $high_risk_dependency -gt 0 ]; then
+          echo "there are high or medium alerts.. failing the build"
+          aws lambda invoke --function-name ImportVulToSecurityHub --payload file://payload.json dependency-check-report.json && echo "LAMBDA_SUCCEDED" || echo "LAMBDA_FAILED";
+          exit 1; 
+        fi
+artifacts:
+  type: zip
+  files: '**/*'
