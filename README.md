@@ -18,8 +18,8 @@ AWS Buildspec and property files for security vulnerability scanning:
 * Sonar-project.properties: SonarQube configuration file.
 
 ### Lambda files:
-
 AWS lambda is used to parse the security scanning results and post them to AWS Security Hub
+
 * import_findings_security_hub.py: to parse the scanning results and extract the vulnerability details.
 * securityhub.py: to post the vulnerability details to AWS Security Hub in ASFF format (AWS Security Finding Format).
 
@@ -30,14 +30,18 @@ AWS lambda is used to parse the security scanning results and post them to AWS S
 ## Deploying pipeline:
 Download the CloudFormation template and pipeline code from GitHub repo.
 
-1.	Log in to your AWS account if you have not done so already. Choose the CloudFormation service from the menu and select Launch Stack to launch the AWS CloudFormation console. Select the provided AWS CloudFormation pipeline template. Choose Next.
-2.	Fill in the stack parameter as shown below (Figure 2 and Figure 3).
-3.	Provide Code details, such as repository name and the branch to trigger the pipeline.
-4.	Select the SAST tool (SonarQube or PHPStan) for code analysis, enter API Token, and the SAST tool URL. You can skip SonarQube details if PHPStan is selected as SAST tool.
-5.	Select the DAST tool (OWASP Zap) for dynamic testing, enter API Token, DAST tool URL, and the application URL to run the scan.
-6.	Provide the Lambda function S3 bucket name, filename, and the handler name.
-7.	Provide the Elastic Beanstalk environment and application details for staging and production to which this pipeline will be deploying the application code. 
-8.	Provide the e-mail address(es) to receive notifications for approvals and pipeline status changes. Please note, once the pipeline is deployed, you will have to confirm the subscription by clicking on the provided link in the email to receive the notifications.
+1.	Log in to your AWS account if you have not done so already. 
+2.	On the CloudFormation console, choose Create Stack. 
+3.	Choose the provided CloudFormation pipeline template. 
+4.	Choose Next.
+5.	Provide the stack parameters:
+    a.	Under Code, provide code details, such as repository name and the branch to trigger the pipeline.
+    b.	Under SAST, choose the SAST tool (SonarQube or PHPStan) for code analysis, enter the API token and the SAST tool URL. You can skip SonarQube details if using PHPStan as the SAST tool.
+    c.	Under DAST, choose the DAST tool (OWASP Zap) for dynamic testing and enter the API token, DAST tool URL, and the application URL to run the scan.
+    d.	Under Lambda functions, enter the Lambda function S3 bucket name, filename, and the handler name.
+    e.	Under STG Elastic Beanstalk Environment and PRD Elastic Beanstalk Environment, enter the Elastic Beanstalk environment and application details for staging and production to which this pipeline deploys the application code. 
+    f.	Under General, enter the email addresses to receive notifications for approvals and pipeline status changes. 
+
 
 Note: The provided CloudFormation template in this blog is formatted for AWS GovCloud, if you are setting this up in standard region, you will have to adjust the partition name in the CloudFormation template. For example, change arn values from “arn:aws-us-gov” to “arn:aws”. 
 
