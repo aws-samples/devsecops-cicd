@@ -35,7 +35,7 @@ Download the CloudFormation template and pipeline code from GitHub repo.
 3.	Choose the provided CloudFormation pipeline template. 
 4.	Choose Next.
 5.	Provide the stack parameters:
-    a.	Under Code, provide code details, such as repository name and the branch to trigger the pipeline.
+    a.	Under Code, provide code details, such as repository name and the branch to trigger the pipeline. \\
     b.	Under SAST, choose the SAST tool (SonarQube or PHPStan) for code analysis, enter the API token and the SAST tool URL. You can skip SonarQube details if using PHPStan as the SAST tool.
     c.	Under DAST, choose the DAST tool (OWASP Zap) for dynamic testing and enter the API token, DAST tool URL, and the application URL to run the scan.
     d.	Under Lambda functions, enter the Lambda function S3 bucket name, filename, and the handler name.
