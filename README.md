@@ -19,7 +19,6 @@ AWS Buildspec and property files for security vulnerability scanning:
 
 ### Lambda files:
 AWS lambda is used to parse the security scanning results and post them to AWS Security Hub
-
 * import_findings_security_hub.py: to parse the scanning results and extract the vulnerability details.
 * securityhub.py: to post the vulnerability details to AWS Security Hub in ASFF format (AWS Security Finding Format).
 
@@ -35,12 +34,12 @@ Download the CloudFormation template and pipeline code from GitHub repo.
 3.	Choose the provided CloudFormation pipeline template. 
 4.	Choose Next.
 5.	Provide the stack parameters:
-    a.	Under Code, provide code details, such as repository name and the branch to trigger the pipeline. \\
-    b.	Under SAST, choose the SAST tool (SonarQube or PHPStan) for code analysis, enter the API token and the SAST tool URL. You can skip SonarQube details if using PHPStan as the SAST tool.
-    c.	Under DAST, choose the DAST tool (OWASP Zap) for dynamic testing and enter the API token, DAST tool URL, and the application URL to run the scan.
-    d.	Under Lambda functions, enter the Lambda function S3 bucket name, filename, and the handler name.
-    e.	Under STG Elastic Beanstalk Environment and PRD Elastic Beanstalk Environment, enter the Elastic Beanstalk environment and application details for staging and production to which this pipeline deploys the application code. 
-    f.	Under General, enter the email addresses to receive notifications for approvals and pipeline status changes. 
+    *  Under Code, provide code details, such as repository name and the branch to trigger the pipeline.
+    *	Under SAST, choose the SAST tool (SonarQube or PHPStan) for code analysis, enter the API token and the SAST tool URL. You can skip SonarQube details if using PHPStan as the SAST tool.
+    *	Under DAST, choose the DAST tool (OWASP Zap) for dynamic testing and enter the API token, DAST tool URL, and the application URL to run the scan.
+    *	Under Lambda functions, enter the Lambda function S3 bucket name, filename, and the handler name.
+    *	Under STG Elastic Beanstalk Environment and PRD Elastic Beanstalk Environment, enter the Elastic Beanstalk environment and application details for staging and production to which this pipeline deploys the application code. 
+    *	Under General, enter the email addresses to receive notifications for approvals and pipeline status changes. 
 
 
 Note: The provided CloudFormation template in this blog is formatted for AWS GovCloud, if you are setting this up in standard region, you will have to adjust the partition name in the CloudFormation template. For example, change arn values from “arn:aws-us-gov” to “arn:aws”. 
