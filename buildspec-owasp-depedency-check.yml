@@ -15,7 +15,7 @@ phases:
   build:
     commands: 
       - cd dependency-check/bin
-      - $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh --project "wordpress" --format JSON --prettyPrint --enableExperimental --scan $CODEBUILD_SRC_DIR --exclude '$CODEBUILD_SRC_DIR/depedency-check/'
+      - $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh --project "wordpress" --format JSON --prettyPrint --enableExperimental --scan $CODEBUILD_SRC_DIR --exclude '$CODEBUILD_SRC_DIR/dependency-check/'
       - echo "OWASP dependency check analysis status is completed..."; 
       - high_risk_dependency=$( cat dependency-check-report.json | grep -c "HIGHEST" )
   post_build:
