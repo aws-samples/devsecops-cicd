@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Sample template
+Resources:
+  SampleVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      Encrypted: false
+      Size: 20
+      VolumeType: gp2
+  SampleBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      #BucketEncryption:
+      #  ServerSideEncryptionConfiguration:
+      #    - ServerSideEncryptionByDefault:
+      #        SSEAlgorithm: AES256
+      BucketName: !Sub 'sample-bucket-${AWS::Region}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled

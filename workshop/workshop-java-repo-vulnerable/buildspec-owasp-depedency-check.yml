@@ -1,0 +1,52 @@
+##Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+##SPDX-License-Identifier: MIT-0
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      java: corretto11
+    commands:
+      - echo "install phase....."
+  pre_build:
+    commands:
+      - mvn -v
+      - mvn clean package
+      - mkdir -p code && rsync -av $CODEBUILD_SRC_DIR/* code/ --exclude infra --exclude lambda-functions --exclude code
+      - wget https://github.com/jeremylong/DependencyCheck/releases/download/v6.0.5/dependency-check-6.0.5-release.zip
+      - unzip dependency-check-6.0.5-release.zip
+      - rm dependency-check-6.0.5-release.zip
+      - chmod -R 775 $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh
+      - echo "stage pre_build completed..."
+  build:
+    commands:
+      ####cfn-guard
+      #- curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/aws-cloudformation/cloudformation-guard/main/install-guard.sh | sh
+      #- export PATH=${PATH}:~/.guard/bin
+      #- ~/.guard/bin/cfn-guard validate -d cfn_guard_template.yml -r cfn_guard_rules
+      ####OWASP Depedency Check
+      - cd dependency-check/bin
+      - $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh --project "java" --format JSON --scan $CODEBUILD_SRC_DIR/code
+      - echo "OWASP dependency check analysis status is completed..."; 
+      - ls -lrt && pwd && cat dependency-check-report.json
+      - chmod 775 *
+      - if( cat dependency-check-report.json | grep -i highest); then high_risk_dependency="yes"; else high_risk_dependency="no"; fi
+      - echo "high depednecy are " $high_risk_dependency
+      - echo "risk is " $risk
+  post_build:
+    commands:
+      - | 
+        jq "{ \"messageType\": \"CodeScanReport\", \"reportType\": \"OWASP-Dependency-Check\", \
+        \"createdAt\": $(date +\"%Y-%m-%dT%H:%M:%S.%3NZ\"), \"source_repository\": env.CODEBUILD_SOURCE_REPO_URL, \
+        \"source_branch\": env.CODEBUILD_SOURCE_VERSION, \
+        \"build_id\": env.CODEBUILD_BUILD_ID, \
+        \"source_commitid\": env.CODEBUILD_RESOLVED_SOURCE_VERSION, \
+        \"report\": . }" dependency-check-report.json > payload.json
+      - |
+        if [ $high_risk_dependency = "yes" ]; then
+          echo "there are high or medium alerts.. failing the build";
+          aws lambda invoke --function-name ImportVulToSecurityHub --payload file://payload.json dependency-check-report.json && echo "LAMBDA_SUCCEDED" || echo "LAMBDA_FAILED";
+          exit 1; 
+        fi
+artifacts:
+  type: zip
+  files: '**/*'

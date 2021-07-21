@@ -1,0 +1,64 @@
+##Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+##SPDX-License-Identifier: MIT-0
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      php: 7.3
+      java: corretto11
+    commands:
+      - echo "in the install phase"
+    finally:
+      - echo This always runs even if the login command fails 
+  pre_build:
+    commands:
+      - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.4.0.2170-linux.zip
+      - unzip sonar-scanner-cli-4.4.0.2170-linux.zip
+      - mv sonar-scanner-4.4.0.2170-linux /opt/sonar-scanner
+      - chmod -R 775 /opt/sonar-scanner
+      - echo "stage pre_build completed"
+  build:
+    commands:
+      - cd $CODEBUILD_SRC_DIR
+      - /opt/sonar-scanner/bin/sonar-scanner -Dsonar.sources=. -Dproject.settings=sonar-project.properties -Dsonar.host.url=$SonarQube_URL -Dsonar.login=$SonarQube_Access_Token > sonarqube_scanreport.json
+      - echo "build stage completed"
+  
+  post_build:
+    commands:
+      - sonar_link=$(cat sonarqube_scanreport.json | egrep -o "you can browse http://[^, ]+")
+      - sonar_task_id=$(cat sonarqube_scanreport.json | egrep -o "task\?id=[^ ]+" | cut -d'=' -f2)
+      # Allow time for SonarQube background task to complete
+      - |
+        stat="PENDING";
+        while [ "$stat" != "SUCCESS" ]; do
+          if [ $stat = "FAILED" ] || [ $stat = "CANCELLED" ]; then
+            echo "SonarQube task $sonar_task_id failed";
+            exit 1;
+          fi
+          stat=$(curl -u $SonarQube_Access_Token $SonarQube_URL/api/ce/task\?id=$sonar_task_id | jq -r '.task.status');
+          sleep 5;
+        done
+      - sonar_analysis_id=$(curl -u $SonarQube_Access_Token $SonarQube_URL/api/ce/task\?id=$sonar_task_id | jq -r '.task.analysisId')
+      - quality_status=$(curl -u $SonarQube_Access_Token $SonarQube_URL/api/qualitygates/project_status\?analysisId=$sonar_analysis_id | jq -r '.projectStatus.status')
+      - SCAN_RESULT=$(curl -o sonarqube_scanreport.json -u $SonarQube_Access_Token $SonarQube_URL/api/issues/search?createdAfter=2020-10-21&componentKeys=devsecops&severities=CRITICAL,BLOCKER&languages=php&types=VULNERABILITY&onComponentOnly=true)
+      - |
+        jq "{ \"messageType\": \"CodeScanReport\", \"reportType\": \"SONAR-QUBE\", \
+        \"createdAt\": $(date +\"%Y-%m-%dT%H:%M:%S.%3NZ\"), \"source_repository\": env.CODEBUILD_SOURCE_REPO_URL, \
+        \"source_branch\": env.CODEBUILD_SOURCE_VERSION, \
+        \"build_id\": env.CODEBUILD_BUILD_ID, \
+        \"source_commitid\": env.CODEBUILD_RESOLVED_SOURCE_VERSION, \
+        \"report\": . }" sonarqube_scanreport.json > payload.json
+      - |
+        if [ $quality_status = "ERROR" ] || [ $quality_status = "WARN" ]; then
+          aws lambda invoke --function-name ImportVulToSecurityHub --payload file://payload.json sonarqube_scan_report.json && echo "LAMBDA_SUCCEDED" || echo "LAMBDA_FAILED";
+          echo "in quality_status ERROR or WARN condition"
+          exit 1;
+        elif [ $quality_status = "OK" ]; then
+          echo "in quality_status OK condition"
+        else
+          echo "in quality_status  unexpected condition"
+          exit 1;
+        fi
+artifacts:
+  type: zip
+  files: '**/*'
