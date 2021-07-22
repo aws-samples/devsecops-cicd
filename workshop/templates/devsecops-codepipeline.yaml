@@ -327,7 +327,7 @@
     CodePipelineArtifactStoreBucket:
       Type: 'AWS::S3::Bucket'
       Properties:
-        BucketName: !Sub pipeline-artifact-${AWS::StackName}
+        BucketName: !Sub pipeline-artifact-${AWS::AccountId}
         Tags:
           - Key: pipeline-name
             Value: !Sub ${AWS::StackName}-pipeline
