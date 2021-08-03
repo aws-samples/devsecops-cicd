@@ -298,10 +298,8 @@ Resources:
       ApplicationName:
         Ref: MyApplication
       Description: AWS ElasticBeanstalk Wordpress Configuration Template
-      #SolutionStackName: "64bit Amazon Linux 2 v3.2.0 running PHP 7.3"
-      #SolutionStackName: "64bit Amazon Linux 2 v3.1.8 running Corretto 11"
-      #SolutionStackName: "64bit Amazon Linux 2 v3.2.1 running Corretto 11"
-      SolutionStackName: "64bit Amazon Linux 2 v3.2.3 running Corretto 11"
+      #SolutionStackName: "64bit Amazon Linux 2 v3.2.3 running Corretto 11"
+      SolutionStackName: "64bit Amazon Linux 2 v3.2.4 running Corretto 11"
       OptionSettings:
       - Namespace: 'aws:elasticbeanstalk:environment'
         OptionName: ServiceRole
