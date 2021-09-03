@@ -41,8 +41,11 @@ Parameters:
   S3BucketName:
       Type: String
       Description: "Bucket Name for configuration for ElasticBeanStalk application"
-      Default: workshop-bucket-srini
-
+      Default: dsop-bucket-1234567890
+  EBSolutionStack:
+      Type: String
+      Description: "Elastic Beanstalk solution stack name"
+      Default: "64bit Amazon Linux 2 v3.2.3 running Corretto 11"                                               
 Resources:
   EBServiceRole:
     Type: 'AWS::IAM::Role'
@@ -298,8 +301,8 @@ Resources:
       ApplicationName:
         Ref: MyApplication
       Description: AWS ElasticBeanstalk Wordpress Configuration Template
-      #SolutionStackName: "64bit Amazon Linux 2 v3.2.3 running Corretto 11"
-      SolutionStackName: "64bit Amazon Linux 2 v3.2.4 running Corretto 11"
+      #SolutionStackName: "64bit Amazon Linux 2 v3.2.4 running Corretto 11"
+      SolutionStackName: !Ref EBSolutionStack
       OptionSettings:
       - Namespace: 'aws:elasticbeanstalk:environment'
         OptionName: ServiceRole
