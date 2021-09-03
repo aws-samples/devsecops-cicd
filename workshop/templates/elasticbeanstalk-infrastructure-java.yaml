@@ -45,7 +45,7 @@ Parameters:
   EBSolutionStack:
       Type: String
       Description: "Elastic Beanstalk solution stack name"
-      Default: "64bit Amazon Linux 2 v3.2.3 running Corretto 11"                                               
+      Default: "64bit Amazon Linux 2 v3.2.5 running Corretto 11"                                               
 Resources:
   EBServiceRole:
     Type: 'AWS::IAM::Role'
