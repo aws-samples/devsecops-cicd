@@ -327,7 +327,7 @@
     CodePipelineArtifactStoreBucket:
       Type: 'AWS::S3::Bucket'
       Properties:
-        BucketName: !Sub pipeline-artifact-${AWS::AccountId}
+        BucketName: !Sub pipeline-artifact-bucket-${AWS::AccountId}
         Tags:
           - Key: pipeline-name
             Value: !Sub ${AWS::StackName}-pipeline
@@ -458,10 +458,10 @@
     TrailBucket: 
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: !Sub trailbucket-${AWS::StackName} 
+        BucketName: !Sub trailbucket-${AWS::AccountId} 
         Tags:
             - Key: pipeline-name
-              Value: !Sub CloudTrail-${AWS::StackName}
+              Value: !Sub CloudTrail-${AWS::AccountId}
               
     ### CloudTrail S3 bucket policy
     TrailBucketPolicy:
