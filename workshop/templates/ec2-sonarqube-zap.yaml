@@ -325,6 +325,8 @@ Outputs:
           - WebServerInstance
           - PublicDnsName
         - ':81'
+    Export:
+      Name: SonarQubeURL
   OWASPZapURL:
     Description: URL for newly created LAMP stack
     Value: !Join 
@@ -333,3 +335,5 @@ Outputs:
         - !GetAtt 
           - WebServerInstance
           - PublicDnsName
+    Export:
+      Name: OWASPZapURL
