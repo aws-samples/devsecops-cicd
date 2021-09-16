@@ -23,7 +23,7 @@ phases:
     commands:
       ###CodeGuru Reviewer
       - CODEGURU_REPO_ARN=$(aws codeguru-reviewer list-repository-associations | jq '.RepositoryAssociationSummaries[] | select(.Name | startswith("dsop-repo")).AssociationArn' | tr -d '[\"\n]')
-      - aws codeguru-reviewer create-code-review --name mycodereview-$CODEBUILD_RESOLVED_SOURCE_VERSION --repository-association-arn $CODEGURU_REPO_ARN --type RepositoryAnalysis={RepositoryHead={BranchName=master}}
+      - aws codeguru-reviewer create-code-review --name mycodereview-$CODEBUILD_RESOLVED_SOURCE_VERSION --repository-association-arn $CODEGURU_REPO_ARN --type RepositoryAnalysis={RepositoryHead={BranchName=main}}
       ###SonarQube
       - cd $CODEBUILD_SRC_DIR
       - /opt/sonar-scanner/bin/sonar-scanner -Dsonar.sources=. -Dproject.settings=sonar-project.properties -Dsonar.host.url=$SonarQube_URL -Dsonar.login=$SonarQube_Access_Token > sonarqube_scanreport.json
