@@ -736,7 +736,7 @@
                   Provider: Manual
                 Configuration:
                   CustomData: There are no critical security vulnerabilities. Your approval is needed to deploy.
-                  ExternalEntityLink: !Sub https://console.amazonaws-us-gov.com/codesuite/codepipeline/pipelines/${AWS::StackName}/general?region=${AWS::Region}
+                  ExternalEntityLink: !Sub https://console.aws.amazon.com/codesuite/codepipeline/pipelines/${AWS::StackName}/general?region=${AWS::Region}
                   NotificationArn: !Ref ApprovalTopic
                 RunOrder: 5
 
