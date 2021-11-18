@@ -1,6 +1,6 @@
 let volumes = Resources.*[ Type == 'AWS::EC2::Volume' ]
 rule sample_volume when %volumes !empty {
-    voulme.Properties {
+    %voulmes.Properties {
         Encrypted == true
         Size <= 10
         VolumeType == 'gp2'
@@ -19,3 +19,5 @@ rule sample_bucket_encryption when %buckets !empty {
 rule sample_bucket when %buckets !empty {
     %buckets.Properties.VersioningConfiguration.Status == 'Enabled'
 }
+
+
