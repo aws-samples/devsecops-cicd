@@ -1,6 +1,6 @@
 let volumes = Resources.*[ Type == 'AWS::EC2::Volume' ]
 rule sample_volume when %volumes !empty {
-    %voulmes.Properties {
+    %volumes.Properties {
         Encrypted == true
         Size <= 10
         VolumeType == 'gp2'

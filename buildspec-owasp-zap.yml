@@ -11,7 +11,7 @@ phases:
       - |
         stat=50;
         while [ "$stat" != 100 ]; do
-          stat=$(curl "$OwaspZapURL/JSON/ascan/view/status/?apikey=zapapikey&scanId=$scanid" | jq -r '.status');
+          stat=$(curl "$OwaspZapURL/JSON/ascan/view/status/?apikey=$OwaspZapApiKey&scanId=$scanid" | jq -r '.status');
           echo "OWASP ZAP scan status is $stat"
           echo "OWASP Zap analysis status is in progress...";
           sleep 5;
