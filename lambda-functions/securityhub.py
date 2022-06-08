@@ -9,7 +9,6 @@ import sys
 import logging
 sys.path.insert(0, "external")
 
-
 logger = logging.getLogger(__name__)
 
 securityhub = boto3.client('securityhub')
