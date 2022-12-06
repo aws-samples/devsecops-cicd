@@ -8,7 +8,7 @@ phases:
   pre_build:
     commands:
       - composer install
-      - wget https://github.com/jeremylong/DependencyCheck/releases/download/v6.0.5/dependency-check-6.0.5-release.zip
+      - wget https://github.com/jeremylong/DependencyCheck/releases/download/v7.1.0/dependency-check-7.1.0-release.zip
       - unzip dependency-check-6.0.5-release.zip
       - chmod -R 775 $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh
       - echo "stage pre_build completed"
