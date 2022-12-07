@@ -28,105 +28,12 @@ Parameters:
       - m3.large
       - m3.xlarge
     ConstraintDescription: must be a valid EC2 instance type.
-  SSHLocation:
-    Description: The IP address range that can be used to SSH to the EC2 instances
-    Type: String
-    MinLength: '9'
-    MaxLength: '18'
-    Default: 0.0.0.0/0
-    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
-    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x
-Mappings:
-  AWSInstanceType2Arch:
-    t1.micro:
-      Arch: HVM64
-    t2.nano:
-      Arch: HVM64
-    t2.micro:
-      Arch: HVM64
-    t2.small:
-      Arch: HVM64
-    t2.medium:
-      Arch: HVM64
-    t2.large:
-      Arch: HVM64
-    m1.small:
-      Arch: HVM64
-    m1.medium:
-      Arch: HVM64
-    m1.large:
-      Arch: HVM64
-    m1.xlarge:
-      Arch: HVM64
-    m2.xlarge:
-      Arch: HVM64
-    m2.2xlarge:
-      Arch: HVM64
-    m2.4xlarge:
-      Arch: HVM64
-    m3.medium:
-      Arch: HVM64
-    m3.large:
-      Arch: HVM64
-    m3.xlarge:
-      Arch: HVM64
-    m3.2xlarge:
-      Arch: HVM64
-  AWSRegionArch2AMI:
-    us-east-1:
-      HVM64: ami-0742b4e673072066f
-      HVMG2: ami-015f1226b535bd02d
-    us-west-2:
-      HVM64: ami-a0cfeed8
-      HVMG2: ami-0e09505bc235aa82d
-    us-west-1:
-      HVM64: ami-0bdb828fd58c52235
-      HVMG2: ami-066ee5fd4a9ef77f1
-    eu-west-1:
-      HVM64: ami-047bb4163c506cd98
-      HVMG2: ami-0a7c483d527806435
-    eu-west-2:
-      HVM64: ami-f976839e
-      HVMG2: NOT_SUPPORTED
-    eu-west-3:
-      HVM64: ami-0ebc281c20e89ba4b
-      HVMG2: NOT_SUPPORTED
-    eu-central-1:
-      HVM64: ami-0233214e13e500f77
-      HVMG2: ami-06223d46a6d0661c7
-    ap-northeast-1:
-      HVM64: ami-06cd52961ce9f0d85
-      HVMG2: ami-053cdd503598e4a9d
-    ap-northeast-2:
-      HVM64: ami-0a10b2721688ce9d2
-      HVMG2: NOT_SUPPORTED
-    ap-northeast-3:
-      HVM64: ami-0d98120a9fb693f07
-      HVMG2: NOT_SUPPORTED
-    ap-southeast-1:
-      HVM64: ami-08569b978cc4dfa10
-      HVMG2: ami-0be9df32ae9f92309
-    ap-southeast-2:
-      HVM64: ami-09b42976632b27e9b
-      HVMG2: ami-0a9ce9fecc3d1daf8
-    ap-south-1:
-      HVM64: ami-0912f71e06545ad88
-      HVMG2: ami-097b15e89dbdcfcf4
-    us-east-2:
-      HVM64: ami-05d72852800cbf29e
-      HVMG2: NOT_SUPPORTED
-    ca-central-1:
-      HVM64: ami-0b18956f
-      HVMG2: NOT_SUPPORTED
-    sa-east-1:
-      HVM64: ami-07b14488da8ea02a0
-      HVMG2: NOT_SUPPORTED
-    cn-north-1:
-      HVM64: ami-0a4eaf6c4454eda75
-      HVMG2: NOT_SUPPORTED
-    cn-northwest-1:
-      HVM64: ami-6b6a7d09
-      HVMG2: NOT_SUPPORTED
+  LatestAmiId:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+    AllowedValues:
+      - /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
 Resources:
   WebServerInstance:
     Type: 'AWS::EC2::Instance'
@@ -247,15 +154,9 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Timeout: PT5M
-      
+
     Properties:
-      ImageId: !FindInMap 
-        - AWSRegionArch2AMI
-        - !Ref 'AWS::Region'
-        - !FindInMap 
-          - AWSInstanceType2Arch
-          - !Ref InstanceType
-          - Arch
+      ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       SecurityGroups:
         - !Ref WebServerSecurityGroup
@@ -297,28 +198,22 @@ Resources:
   WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable HTTP access via port 80
+      GroupDescription: Enable HTTP access via port 80, 81
       SecurityGroupIngress:
         - IpProtocol: tcp
+          Description: allow traffic on port 80 for OWASP ZAP Instance
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref SSHLocation
-        - IpProtocol: tcp
-          FromPort: 9000
-          ToPort: 9000
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
+          Description: allow traffic on port 81 for the SonarQube Instance
           FromPort: 81
           ToPort: 81
           CidrIp: 0.0.0.0/0
 Outputs:
   SonarQubeURL:
-    Description: URL for newly created LAMP stack
-    Value: !Join 
+    Description: URL for newly created SonarQube Instance
+    Value: !Join
       - ''
       - - 'http://'
         - !GetAtt 
@@ -328,8 +223,8 @@ Outputs:
     Export:
       Name: SonarQubeURL
   OWASPZapURL:
-    Description: URL for newly created LAMP stack
-    Value: !Join 
+    Description: URL for newly created OWASP ZAP Instance
+    Value: !Join
       - ''
       - - 'http://'
         - !GetAtt 
