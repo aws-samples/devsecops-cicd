@@ -64,7 +64,7 @@ Resources:
           Principal:
             Service: [config.amazonaws.com]
           Action: ['sts:AssumeRole']
-      ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWSConfigRole']
+      ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWS_ConfigRole']
       Policies:
       - PolicyName: root
         PolicyDocument:
