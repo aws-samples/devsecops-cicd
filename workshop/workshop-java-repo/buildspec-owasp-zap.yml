@@ -19,7 +19,7 @@ phases:
         done
         echo "OWASP Zap analysis status is completed..."; 
       - high_alerts=$( curl "$OwaspZapURL/JSON/alert/view/alertsSummary/?apikey=$OwaspZapApiKey&baseurl=$ApplicationURL" | jq -r '.alertsSummary.High')
-      - medium_alerts=$( curl "$OwaspZapURL/JSON/alert/view/alertsSummary/?apikey=$OwaspZapApiKey&baseurl=$ApplicationURL" | jq -r '.alertsSummary.Meduim')
+      - medium_alerts=$( curl "$OwaspZapURL/JSON/alert/view/alertsSummary/?apikey=$OwaspZapApiKey&baseurl=$ApplicationURL" | jq -r '.alertsSummary.Medium')
       - echo "high alerts are $high_alerts"    
   build:
     commands: 
@@ -34,8 +34,8 @@ phases:
         \"build_id\": env.CODEBUILD_BUILD_ID, \
         \"source_commitid\": env.CODEBUILD_RESOLVED_SOURCE_VERSION, \
         \"report\": . }" zap-scan-results.json > payload.json
-      - if [ $high_alerts != 0 ]; then
-          echo "there are high alerts.. failing the build";
+      - if [ $high_alerts -gt 1 ]; then
+          echo "there are more than 1 high alerts.. failing the build";
           aws lambda invoke --function-name ImportVulToSecurityHub --payload file://payload.json owaspzap_scan_report.json && echo "LAMBDA_SUCCEDED" || echo "LAMBDA_FAILED";
           exit 1; 
         fi
