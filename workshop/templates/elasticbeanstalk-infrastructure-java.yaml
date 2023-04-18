@@ -69,6 +69,11 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth
         - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService
       RoleName: !Sub 'eb-service-role-${AWS::StackName}'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Resource provided with explicit role name for workshop and consistency."
 
   EBEC2Role:
     Type: 'AWS::IAM::Role'
@@ -88,7 +93,12 @@ Resources:
         - arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker
         - arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier
       RoleName: !Sub 'eb-ec2-role-${AWS::StackName}'
-  
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Resource provided with explicit role name for workshop and consistency."
+
   EBEC2InstanceProfile: 
     Type: "AWS::IAM::InstanceProfile"
     Properties: 
@@ -107,6 +117,11 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref EnvironmentName
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W60
+            reason: "VPC should have a flow log attached. Flow logs have been disabled for workshop."
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -127,7 +142,7 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       CidrBlock: !Ref PublicSubnet1CIDR
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
@@ -138,7 +153,7 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 1, !GetAZs  '' ]
       CidrBlock: !Ref PublicSubnet2CIDR
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
@@ -249,6 +264,17 @@ Resources:
           Description: Allow all outbound traffic by default from Load Balancer
           IpProtocol: "-1"
       VpcId: !Ref VPC
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W40
+            reason: "Security Group for ELB and this is permissible."
+          - id: W5
+            reason: "Security Groups found with cidr open to world on egress and this is permissible on ELB."
+          - id: W9
+            reason: "Security Groups found with ingress cidr that is not /32 and this is permissible on ELB."
+          - id: W2
+            reason: "Security Groups found with cidr open to world on ingress. This should never be true on instance. Permissible on ELB."
 
   WebSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -262,9 +288,11 @@ Resources:
         IpProtocol: tcp
         ToPort: 80
       SecurityGroupEgress:
-      - CidrIp: 0.0.0.0/0
-        Description: Allow all outbound traffic by default from Instance
-        IpProtocol: "-1"
+      - DestinationSecurityGroupId: !Ref ELBSecurityGroup
+        Description: allow port 80 access
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
 
   MyApplication:
       Type: AWS::ElasticBeanstalk::Application

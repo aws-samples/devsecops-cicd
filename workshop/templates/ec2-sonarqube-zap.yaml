@@ -33,6 +33,9 @@ Parameters:
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
     AllowedValues:
       - /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  DefaultVPCId:
+    Description: Please select the Default VPC ID
+    Type: AWS::EC2::VPC::Id
 
 Resources:
   WebServerInstance:
@@ -158,7 +161,7 @@ Resources:
     Properties:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
-      SecurityGroups:
+      SecurityGroupIds:
         - !Ref WebServerSecurityGroup
       UserData:
         "Fn::Base64":
@@ -199,17 +202,53 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Enable HTTP access via port 80, 81
-      SecurityGroupIngress:
+      VpcId: !Ref DefaultVPCId
+      SecurityGroupEgress:
         - IpProtocol: tcp
-          Description: allow traffic on port 80 for OWASP ZAP Instance
+          Description: allow all outbound traffic on port 80 from OWASP ZAP Instance
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          Description: allow traffic on port 81 for the SonarQube Instance
+          Description: allow all outbound traffic on port 81 from the SonarQube Instance
           FromPort: 81
           ToPort: 81
           CidrIp: 0.0.0.0/0
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic on port 443 from Instance
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W2
+            reason: "Egress on port 80 and 443 to install packages on the instance."
+          - id: W5
+            reason: "Egress on port 80 and 443 to install packages on the instance."
+          - id: W9
+            reason: "Ingress on port 80 from /0."
+
+  SecurityGroupIngressPort80:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow all inbound traffic on port 80 for OWASP ZAP Instance
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      GroupId: !Ref WebServerSecurityGroup
+      CidrIp: 0.0.0.0/0
+
+  SecurityGroupIngressPort81:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow all inbound traffic on port 81 for the SonarQube Instance
+      IpProtocol: tcp
+      FromPort: 81
+      ToPort: 81
+      GroupId: !Ref WebServerSecurityGroup
+      CidrIp: 0.0.0.0/0
+
 Outputs:
   SonarQubeURL:
     Description: URL for newly created SonarQube Instance
