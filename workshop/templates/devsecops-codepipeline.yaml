@@ -206,6 +206,7 @@
       Type: AWS::Logs::LogGroup
       Properties: 
         LogGroupName: !Sub ${AWS::StackName}-pipeline-logs
+        KmsKeyId: !GetAtt CloudWatchLogsEncryptionKey.Arn
         RetentionInDays: 7
 
     ### KMS key for codebuild data encryption
@@ -268,11 +269,106 @@
           - Key: pipeline-name
             Value: !Sub ${AWS::StackName}-pipeline
 
+    CloudWatchLogsEncryptionKey:
+      Type: "AWS::KMS::Key"
+      Properties:
+        EnableKeyRotation: true
+        KeyPolicy:
+          Version: 2012-10-17
+          Statement:
+            - Sid: Enable IAM User Permissions
+              Effect: Allow
+              Principal:
+                AWS:
+                  Fn::Join: [":", ["arn:aws:iam:", !Ref "AWS::AccountId", "root"]]
+              Action:
+                [
+                  "kms:Create*",
+                  "kms:Describe*",
+                  "kms:Enable*",
+                  "kms:List*",
+                  "kms:Put*",
+                  "kms:Update*",
+                  "kms:Revoke*",
+                  "kms:Disable*",
+                  "kms:Get*",
+                  "kms:Delete*",
+                  "kms:TagResource",
+                  "kms:UntagResource",
+                  "kms:ScheduleKeyDeletion",
+                  "kms:CancelKeyDeletion",
+                ]
+              Resource: "*"
+            - Sid: Enable CloudWatch Logs Encryption
+              Effect: Allow
+              Principal:
+                Service: "logs.amazonaws.com"
+              Action:
+                [
+                  "kms:Encrypt",
+                  "kms:Decrypt",
+                  "kms:ReEncrypt*",
+                  "kms:GenerateDataKey*",
+                  "kms:DescribeKey",
+                ]
+              Resource: "*"
+        Tags:
+          - Key: KeyName
+            Value: !Sub ${AWS::StackName}-CloudWatchLogsKMSKey
+
+    SNSEncryptionKey:
+      Type: "AWS::KMS::Key"
+      Properties:
+        EnableKeyRotation: true
+        KeyPolicy:
+          Version: 2012-10-17
+          Statement:
+            - Sid: Enable IAM User Permissions
+              Effect: Allow
+              Principal:
+                AWS:
+                  Fn::Join: [":", ["arn:aws:iam:", !Ref "AWS::AccountId", "root"]]
+              Action:
+                [
+                  "kms:Create*",
+                  "kms:Describe*",
+                  "kms:Enable*",
+                  "kms:List*",
+                  "kms:Put*",
+                  "kms:Update*",
+                  "kms:Revoke*",
+                  "kms:Disable*",
+                  "kms:Get*",
+                  "kms:Delete*",
+                  "kms:TagResource",
+                  "kms:UntagResource",
+                  "kms:ScheduleKeyDeletion",
+                  "kms:CancelKeyDeletion",
+                ]
+              Resource: "*"
+            - Sid: Enable CloudTrail Access
+              Effect: Allow
+              Principal:
+                Service: "cloudtrail.amazonaws.com"
+              Action:
+                [
+                  "kms:Encrypt",
+                  "kms:Decrypt",
+                  "kms:ReEncrypt*",
+                  "kms:GenerateDataKey*",
+                  "kms:DescribeKey",
+                ]
+              Resource: "*"
+        Tags:
+          - Key: KeyName
+            Value: !Sub ${AWS::StackName}-SNSKMSKey
+
     ### SNS topic for pipeline approvals
     ApprovalTopic:
       Type: AWS::SNS::Topic
       Properties:
         DisplayName: PipelineApproval
+        KmsMasterKeyId: alias/aws/sns
         Subscription: 
         - Endpoint: !Ref PipelineApproverEmail
           Protocol: "email"
@@ -281,11 +377,13 @@
           - Key: pipeline-name
             Value: !Sub ${AWS::StackName}-pipeline
 
+
     ### SNS topic for pipeline notifications
     PipelineTopic:
       Type: AWS::SNS::Topic
       Properties:
         DisplayName: PipelineStageChangeNotification
+        KmsMasterKeyId: alias/aws/sns
         Subscription: 
         - Endpoint: !Ref PipelineNotificationsEmail
           Protocol: "email"
@@ -299,6 +397,7 @@
       Type: AWS::SNS::Topic
       Properties:
         DisplayName: CloudTrailNotification
+        KmsMasterKeyId: !Ref SNSEncryptionKey
         Subscription: 
         - Endpoint: !Ref PipelineNotificationsEmail
           Protocol: "email"
@@ -319,23 +418,33 @@
             S3Bucket: !Ref LambdaPackageLoc
             S3Key: !Ref LambdaPackageS3Key
           Timeout: 10
+          ReservedConcurrentExecutions: 10
           Tags:
             - Key: pipeline-name
               Value: !Sub ${AWS::StackName}-pipeline       
-        
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W89
+              reason: "Lambda functions should be deployed inside a VPC."
+
     ### S3 bucket to store build artifacts
     CodePipelineArtifactStoreBucket:
       Type: 'AWS::S3::Bucket'
       Properties:
         BucketName: !Sub pipeline-artifact-bucket-${AWS::AccountId}
-        Tags:
-          - Key: pipeline-name
-            Value: !Sub ${AWS::StackName}-pipeline
         BucketEncryption:
           ServerSideEncryptionConfiguration:
             - ServerSideEncryptionByDefault:
-                SSEAlgorithm: 'aws:kms'
-                KMSMasterKeyID: KMS-KEY-ARN
+                SSEAlgorithm: AES256
+        Tags:
+          - Key: pipeline-name
+            Value: !Sub ${AWS::StackName}-pipeline
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W35
+              reason: "Access logging disabled for the bucket."
     
     ### S3bucket poilicy to deny if server side encryption is not enabled or if transport security (SSL/TLS) is not enabled 
     CodePipelineArtifactStoreBucketPolicy:
@@ -462,7 +571,16 @@
         Tags:
             - Key: pipeline-name
               Value: !Sub CloudTrail-${AWS::AccountId}
-              
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W35
+              reason: "Access logging disabled for the bucket."
+
     ### CloudTrail S3 bucket policy
     TrailBucketPolicy:
       Type: 'AWS::S3::BucketPolicy'
@@ -476,6 +594,14 @@
             Principal:
               Service: 'cloudtrail.amazonaws.com'
             Action: 's3:GetBucketAcl'
+            Resource: !Sub 'arn:aws:s3:::${TrailBucket}'
+          - Sid: AWSCloudTrailKMS
+            Effect: Allow
+            Principal:
+              Service: 'cloudtrail.amazonaws.com'
+            Action: 
+              - kms:GenerateDataKey*
+              - kms:Decrypt
             Resource: !Sub 'arn:aws:s3:::${TrailBucket}'
           - Sid: AWSCloudTrailWrite
             Effect: Allow
@@ -519,6 +645,7 @@
     TrailLogGroup:
       Type: 'AWS::Logs::LogGroup'
       Properties:
+        KmsKeyId: !GetAtt CloudWatchLogsEncryptionKey.Arn
         RetentionInDays: 90
 
     ### CloudTrail LogGroup Role
@@ -569,6 +696,11 @@
         Namespace: "CloudTrailMetrics"
         Statistic: "Sum"
         Period: 1800
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W28
+              reason: "Resource found with an explicit name, this disallows updates that require replacement of this resource."
 
     CodeBuildChangeMetricFilter:
       Type: 'AWS::Logs::MetricFilter'
@@ -594,6 +726,11 @@
         Namespace: "CloudTrailMetrics"
         Statistic: "Sum"
         Period: 1800
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W28
+              reason: "Resource found with an explicit name, this disallows updates that require replacement of this resource."
 
     ### AWS Config rules to record out of complaince scenarios
     AWSConfigRule1:
@@ -697,7 +834,7 @@
                 Configuration:
                   ProjectName: !Ref SASTBuildProject
                 RunOrder: 2
-     
+    
           ### CodeDeploy stage to deploy to Elastic Beanstalk
           - Name: Staging-Depoy-and-DAST-Analysis
             Actions:
@@ -876,7 +1013,6 @@
         Tags:
           - Key: pipeline-name
             Value: !Sub ${AWS::StackName}-pipeline       
-        
 
     ###StaticCode Analysis ServiceRole
     StaticCodeAnalysisServiceRole:
@@ -896,30 +1032,52 @@
               Version: '2012-10-17'
               Statement:
                 - Effect: Allow
-                  Action: iam:PassRole
+                  Action:
+                    - 'logs:CreateLogGroup'
+                    - 'logs:CreateLogStream'
+                    - 'logs:PutLogEvents'
+                  Resource: 
+                    - !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:*"
+                    - !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:*:log-stream:*"
+                - Effect: Allow
+                  Action:
+                    - 's3:PutObject'
+                    - 's3:GetObject'
+                    - 's3:GetObjectVersion'
+                    - 's3:GetBucketAcl'
+                    - 's3:GetBucketLocation'
                   Resource: '*'
                 - Effect: Allow
                   Action:
-                    - iam:PassRole
-                    - logs:*
-                    - s3:*
-                    - cloudformation:*
-                    - cloudwatch:*
-                    - cloudtrail:*
-                    - codebuild:*
-                    - codecommit:*
-                    - codepipeline:*
-                    - ssm:*
-                    - lambda:*
-                    - kms:*
-                    - ecr:*
-                    - codeguru-reviewer:*
-                  Resource: '*'
+                    - lambda:invoke*
+                  Resource:
+                    - !Sub "arn:aws:lambda:*:${AWS::AccountId}:function:*"
+                - Effect: Allow
+                  Action:
+                    - ssm:GetParameters
+                  Resource:
+                    - !Sub "arn:aws:ssm:*:${AWS::AccountId}:*"
+                - Effect: Allow
+                  Action:
+                    - 'codebuild:CreateReportGroup'
+                    - 'codebuild:CreateReport'
+                    - 'codebuild:UpdateReport'
+                    - 'codebuild:BatchPutTestCases'
+                    - 'codebuild:BatchPutCodeCoverages'
+                  Resource:
+                    - !Sub "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/*"
         Path: /
         RoleName: !Join
           - '-'
           - - !Ref 'AWS::StackName'
             - SecurityCodeAnalysisRole
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W11
+              reason: "IAM role should not allow * resource on its permissions policy."
+            - id: W28
+              reason: "Resource found with an explicit name, this disallows updates that require replacement of this resource."
 
     #### Lambda Function Execution Role
     LambdaExecutionRole:
@@ -943,11 +1101,39 @@
               Statement:
                 - Effect: Allow
                   Action:
-                    - logs:*
-                    - S3:*
-                    - securityhub:*
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource:
+                    - !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:*"
+                    - !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:*:log-stream:*"
+                - Effect: Allow
+                  Action:
+                    - s3:PutObject
+                    - s3:GetObject
+                    - s3:GetObjectVersion
+                    - s3:GetBucketAcl
+                    - s3:GetBucketLocation
+                    - codeguru-reviewer:AssociateRepository
+                    - codeguru-reviewer:CreateConnectionToken
+                    - codeguru-reviewer:GetMetricsData
+                    - codeguru-reviewer:ListRepositoryAssociations
+                    - codeguru-reviewer:ListCodeReviews
+                    - codeguru-reviewer:ListThirdPartyRepositories
                   Resource: '*'
-    
+                - Effect: Allow
+                  Action:
+                    - securityhub:BatchImportFindings
+                  Resource: 
+                    - !Sub "arn:aws:securityhub:${AWS::Region}:${AWS::AccountId}:product/*/*"
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W11
+              reason: "IAM role should not allow * resource on its permissions policy."
+            - id: W28
+              reason: "Resource found with an explicit name, this disallows updates that require replacement of this resource."
+
     ### Pipeline ServicRole
     PipelineServiceRole:
       Type: 'AWS::IAM::Role'
@@ -973,7 +1159,7 @@
                     - 'codecommit:GetCommit'
                     - 'codecommit:GetUploadArchiveStatus'
                     - 'codecommit:UploadArchive'
-                  Resource: '*'
+                  Resource: !Sub 'arn:aws:codecommit:*:${AWS::AccountId}:*'
                 - Effect: Allow
                   Action:
                     - 'codedeploy:CreateDeployment'
@@ -981,25 +1167,22 @@
                     - 'codedeploy:GetDeployment'
                     - 'codedeploy:GetDeploymentConfig'
                     - 'codedeploy:RegisterApplicationRevision'
-                  Resource: '*'
+                  Resource: 
+                    - !Sub 'arn:aws:codedeploy:*:${AWS::AccountId}:application:*'
+                    - !Sub 'arn:aws:codedeploy:*:${AWS::AccountId}:deploymentconfig:*'
+                    - !Sub 'arn:aws:codedeploy:*:${AWS::AccountId}:deploymentgroup:*/*'
                 - Effect: Allow
                   Action:
                     - 'codebuild:BatchGetBuilds'
                     - 'codebuild:StartBuild'
-                  Resource: '*'
+                  Resource: !Sub 'arn:aws:codebuild:*:${AWS::AccountId}:project/*'
                 - Effect: Allow
                   Action:
-                    - 'devicefarm:ListProjects'
-                    - 'devicefarm:ListDevicePools'
-                    - 'devicefarm:GetRun'
-                    - 'devicefarm:GetUpload'
-                    - 'devicefarm:CreateUpload'
-                    - 'devicefarm:ScheduleRun'
+                    - 'lambda:ListFunctions'
                   Resource: '*'
                 - Effect: Allow
                   Action:
                     - 'lambda:InvokeFunction'
-                    - 'lambda:ListFunctions'
                     - 'lambda:CreateFunction'
                     - 'lambda:UpdateFunctionConfiguration'
                     - 'lambda:UpdateFunctionCode'
@@ -1007,11 +1190,17 @@
                     - 'lambda:PublishVersion'
                     - 'lambda:GetFunctionConfiguration'
                     - 'lambda:GetFunction'
-                  Resource: '*'
+                  Resource: !Sub 'arn:aws:lambda:*:${AWS::AccountId}:function:*'
                 - Effect: Allow
                   Action:
                     - 'iam:PassRole'
                   Resource: '*'
+                  Condition:
+                    StringEqualsIfExists:
+                      "iam:PassedToService":
+                        - 'cloudformation.amazonaws.com'
+                        - 'elasticbeanstalk.amazonaws.com'
+                        - 'ec2.amazonaws.com'
                 - Effect: Allow
                   Action:
                     - 'elasticbeanstalk:*'
@@ -1023,13 +1212,21 @@
                     - 'sns:*'
                     - 'cloudformation:*'
                     - 'rds:*'
-                    - 'sqs:*'
-                    - 'ecs:*'
                     - 'logs:*'
-                    - 'kms:*'
                     - 'ecr:*'
                   Resource: '*'
-  
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: F3
+              reason: "IAM role should not allow * resource with PassRole action on its permissions policy. Passed based on condition."
+            - id: F38
+              reason: "IAM role should not allow * action on its permissions policy."
+            - id: W11
+              reason: "IAM role should not allow * resource on its permissions policy."
+            - id: W76
+              reason: "SPCM for IAM policy document is higher than 25."
+
   ###Outputs
   Outputs:
     ArtifactBucketName:
@@ -1052,6 +1249,5 @@
       Description: KMS Key ARN for the pipeline
       Value: !GetAtt PipelineKMSKey.Arn
 
-    
 
-    
+

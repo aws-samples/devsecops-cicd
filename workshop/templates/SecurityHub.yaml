@@ -36,9 +36,35 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               KMSMasterKeyID: KMS-KEY-ARN
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "S3 Bucket should have access logging configured."
+
+  ConfigBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref ConfigBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Action:
+              - "s3:*"
+            Effect: Deny
+            Resource:
+              - !Sub "arn:aws:s3:::${ConfigBucket}"
+              - !Sub "arn:aws:s3:::${ConfigBucket}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+            Principal:
+              AWS: "*"
 
   ConfigTopic:
     Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId: alias/aws/sns
 
   ConfigTopicPolicy:
     Type: AWS::SNS::TopicPolicy
@@ -82,4 +108,12 @@ Resources:
                 s3:x-amz-acl: bucket-owner-full-control
           - Effect: Allow
             Action: config:Put*
-            Resource: '*'
+            Resource:
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:config-aggregator/*"
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:config-rule/*"
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:remediation-configuration/*"
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:stored-query/*/*"
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:organization-config-rule/*"
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:conformance-pack/*/*"
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:organization-conformance-pack/*"
+              - !Sub "arn:aws:config:*:${AWS::AccountId}:aggregation-authorization/*/*"
