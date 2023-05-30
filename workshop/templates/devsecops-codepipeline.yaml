@@ -346,17 +346,14 @@
                   "kms:CancelKeyDeletion",
                 ]
               Resource: "*"
-            - Sid: Enable CloudTrail Access
+            - Sid: Enable EventBridge Publish Permissions
               Effect: Allow
               Principal:
-                Service: "cloudtrail.amazonaws.com"
+                Service: "cloudwatch.amazonaws.com"
               Action:
                 [
-                  "kms:Encrypt",
                   "kms:Decrypt",
-                  "kms:ReEncrypt*",
-                  "kms:GenerateDataKey*",
-                  "kms:DescribeKey",
+                  "kms:GenerateDataKey*"
                 ]
               Resource: "*"
         Tags:
@@ -594,14 +591,6 @@
             Principal:
               Service: 'cloudtrail.amazonaws.com'
             Action: 's3:GetBucketAcl'
-            Resource: !Sub 'arn:aws:s3:::${TrailBucket}'
-          - Sid: AWSCloudTrailKMS
-            Effect: Allow
-            Principal:
-              Service: 'cloudtrail.amazonaws.com'
-            Action: 
-              - kms:GenerateDataKey*
-              - kms:Decrypt
             Resource: !Sub 'arn:aws:s3:::${TrailBucket}'
           - Sid: AWSCloudTrailWrite
             Effect: Allow
@@ -1049,12 +1038,12 @@
                   Resource: '*'
                 - Effect: Allow
                   Action:
-                    - lambda:invoke*
+                    - "lambda:invoke*"
                   Resource:
                     - !Sub "arn:aws:lambda:*:${AWS::AccountId}:function:*"
                 - Effect: Allow
                   Action:
-                    - ssm:GetParameters
+                    - "ssm:GetParameters"
                   Resource:
                     - !Sub "arn:aws:ssm:*:${AWS::AccountId}:*"
                 - Effect: Allow
@@ -1066,6 +1055,20 @@
                     - 'codebuild:BatchPutCodeCoverages'
                   Resource:
                     - !Sub "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/*"
+                - Effect: Allow
+                  Action:
+                    - "codeguru-reviewer:ListCodeReviews"
+                    - "codeguru-reviewer:ListRepositoryAssociations"
+                    - "codeguru-reviewer:CreateConnectionToken"
+                    - "codeguru-reviewer:GetMetricsData"
+                    - "codeguru-reviewer:ListThirdPartyRepositories"
+                    - "codeguru-reviewer:AssociateRepository"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "codeguru-reviewer:CreateCodeReview"
+                  Resource: 
+                    - !Sub "arn:aws:codeguru-reviewer:*:${AWS::AccountId}:association:*"
         Path: /
         RoleName: !Join
           - '-'

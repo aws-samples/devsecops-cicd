@@ -197,7 +197,9 @@ Resources:
               # /opt/aws/bin/cfn-hup || error_exit 'Failed to start cfn-hup'
               # All done so signal success
               /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource WebServerInstance --region ${AWS::Region}
-
+      Tags:
+        - Key: Name
+          Value: !Ref 'AWS::StackName'
   WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
