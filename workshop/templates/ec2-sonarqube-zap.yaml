@@ -30,9 +30,10 @@ Parameters:
     ConstraintDescription: must be a valid EC2 instance type.
   LatestAmiId:
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
-    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+    Default: /aws/service/ami-amazon-linux-latest/amzn2023-ami-hvm-x86_64-gp2
     AllowedValues:
       - /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+      - /aws/service/ami-amazon-linux-latest/amzn2023-ami-hvm-x86_64-gp2
   DefaultVPCId:
     Description: Please select the Default VPC ID
     Type: AWS::EC2::VPC::Id
@@ -156,13 +157,14 @@ Resources:
               command: echo "test" > /home/ec2-user/ec2-echo.test
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT5M
+        Timeout: PT15M
 
     Properties:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       SecurityGroupIds:
         - !Ref WebServerSecurityGroup
+      IamInstanceProfile: !Ref WebServerInstanceProfile
       UserData:
         "Fn::Base64":
           !Sub |
@@ -178,9 +180,6 @@ Resources:
               cd /home/ec2-user
               wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-8.7.1.42226.zip
               unzip sonarqube-8.7.1.42226.zip
-              # sudo ln -s $SONAR_HOME/bin/linux-x86-64/sonar.sh /usr/bin/sonar
-              # sudo chmod 755 /etc/init.d/sonar
-              # sudo chkconfig --add sonar
               sed -i "s/#RUN_AS_USER=/RUN_AS_USER=ec2-user/g" /home/ec2-user/sonarqube-8.7.1.42226/bin/linux-x86-64/sonar.sh
               chown -R ec2-user:ec2-user /home/ec2-user/sonarqube-8.7.1.42226/
               /home/ec2-user/sonarqube-8.7.1.42226/bin/linux-x86-64/sonar.sh start &
@@ -188,9 +187,9 @@ Resources:
               #### Installing Zap
               ## Starting docker service and creating user/group for owasp zap
               sudo service docker start && sudo useradd zap && sudo usermod -a -G docker zap
-              ## Pulling owasp zap cdocker container from docker hub
-              docker pull owasp/zap2docker-stable
-              docker run -u zap -p 8085:8085 -i owasp/zap2docker-stable zap.sh -daemon -host 0.0.0.0 -port 8085 -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true -config api.key=workshopzapkey &
+              ## Pulling owasp zap docker container from docker hub
+              docker pull zaproxy/zap-bare
+              docker run -u zap -p 8085:8085 -i zaproxy/zap-bare zap.sh -daemon -host 0.0.0.0 -port 8085 -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true -config api.key=workshopzapkey &
               ## Checking cfn init 
               /opt/aws/bin/cfn-init -s ${AWS::StackId} -r WebServerInstance --configsets InstallAndRun --region ${AWS::Region} || error_exit 'Failed to run cfn-init'
               ## Start up the cfn-hup daemon to listen for changes to the EC2 instance metadata
@@ -250,6 +249,35 @@ Resources:
       ToPort: 81
       GroupId: !Ref WebServerSecurityGroup
       CidrIp: 0.0.0.0/0
+  WebServerInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      RoleName: !Sub ${AWS::StackName}-EC2Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Resource provided with explicit role name for workshop and consistency."
+
+  WebServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref WebServerInstanceRole
+      InstanceProfileName: !Sub ${AWS::StackName}-EC2InstanceProfile
 
 Outputs:
   SonarQubeURL:
