@@ -8,9 +8,10 @@ phases:
   pre_build:
     commands:
       - mkdir -p code && rsync -av $CODEBUILD_SRC_DIR/* code/ --exclude infra --exclude lambda-functions --exclude code
-      - wget https://github.com/jeremylong/DependencyCheck/releases/download/v7.4.0/dependency-check-7.4.0-release.zip
-      - unzip dependency-check-7.4.0-release.zip
-      - rm dependency-check-7.4.0-release.zip
+      - VERSION=$(curl -s https://jeremylong.github.io/DependencyCheck/current.txt)
+      - curl -Ls "https://github.com/jeremylong/DependencyCheck/releases/download/v$VERSION/dependency-check-$VERSION-release.zip" --output dependency-check.zip
+      - unzip dependency-check.zip
+      - rm dependency-check.zip
       - chmod -R 775 $CODEBUILD_SRC_DIR/dependency-check/bin/dependency-check.sh
       - echo "stage pre_build completed"
   build:

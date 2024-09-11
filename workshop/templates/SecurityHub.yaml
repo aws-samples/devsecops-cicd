@@ -7,20 +7,20 @@ Description: >
 
 Resources:
   DevSecOpsHub:
-    Type: AWS::SecurityHub::Hub
+    Type: 'AWS::SecurityHub::Hub'
     DependsOn: DeliveryChannel
 
 
 ##### AWS Config rules
   AWSConfigRecorder:  
-    Type: AWS::Config::ConfigurationRecorder
+    Type: 'AWS::Config::ConfigurationRecorder'
     Properties:
       RecordingGroup: 
         AllSupported: true
       RoleARN: !GetAtt [ConfigRole, Arn]
 
   DeliveryChannel:
-    Type: AWS::Config::DeliveryChannel
+    Type: 'AWS::Config::DeliveryChannel'
     Properties:
       ConfigSnapshotDeliveryProperties:
         DeliveryFrequency: One_Hour
@@ -28,9 +28,14 @@ Resources:
       SnsTopicARN: !Ref 'ConfigTopic'
   
   ConfigBucket:
-    Type: AWS::S3::Bucket
+    Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Sub configbucket-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true      
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -62,12 +67,12 @@ Resources:
               AWS: "*"
 
   ConfigTopic:
-    Type: AWS::SNS::Topic
+    Type: 'AWS::SNS::Topic'
     Properties:
       KmsMasterKeyId: alias/aws/sns
 
   ConfigTopicPolicy:
-    Type: AWS::SNS::TopicPolicy
+    Type: 'AWS::SNS::TopicPolicy'
     Properties:
       PolicyDocument:
         Id: ConfigTopicPolicy
@@ -81,7 +86,7 @@ Resources:
       Topics: [!Ref 'ConfigTopic']
 
   ConfigRole:
-    Type: AWS::IAM::Role
+    Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'

@@ -434,6 +434,11 @@
           ServerSideEncryptionConfiguration:
             - ServerSideEncryptionByDefault:
                 SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
         Tags:
           - Key: pipeline-name
             Value: !Sub ${AWS::StackName}-pipeline
@@ -500,7 +505,9 @@
                   Action: 'codepipeline:StartPipelineExecution'
                   Resource: !Join 
                     - ''
-                    - - 'arn:aws:codepipeline:'
+                    - - 'arn:'
+                      - !Ref 'AWS::Partition'
+                      - ':codepipeline:'
                       - !Ref 'AWS::Region'
                       - ':'
                       - !Ref 'AWS::AccountId'
@@ -519,7 +526,9 @@
           resources:
             - !Join 
               - ''
-              - - 'arn:aws:codecommit:'
+              - - 'arn:'
+                - !Ref 'AWS::Partition'
+                - ':codecommit:'
                 - !Ref 'AWS::Region'
                 - ':'
                 - !Ref 'AWS::AccountId'
@@ -536,7 +545,9 @@
         Targets:
           - Arn: !Join 
               - ''
-              - - 'arn:aws:codepipeline:'
+              - - 'arn:'
+                - !Ref 'AWS::Partition'
+                - ':codepipeline:'
                 - !Ref 'AWS::Region'
                 - ':'
                 - !Ref 'AWS::AccountId'
@@ -562,9 +573,14 @@
 
     ### Cloudtrail S3 bucket
     TrailBucket: 
-      Type: AWS::S3::Bucket
+      Type: 'AWS::S3::Bucket'
       Properties:
         BucketName: !Sub trailbucket-${AWS::AccountId} 
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
         Tags:
             - Key: pipeline-name
               Value: !Sub CloudTrail-${AWS::AccountId}
@@ -591,13 +607,13 @@
             Principal:
               Service: 'cloudtrail.amazonaws.com'
             Action: 's3:GetBucketAcl'
-            Resource: !Sub 'arn:aws:s3:::${TrailBucket}'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${TrailBucket}'
           - Sid: AWSCloudTrailWrite
             Effect: Allow
             Principal:
               Service: 'cloudtrail.amazonaws.com'
             Action: 's3:PutObject'
-            Resource: !Sub 'arn:aws:s3:::${TrailBucket}/AWSLogs/${AWS::AccountId}/*'
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${TrailBucket}/AWSLogs/${AWS::AccountId}/*'
             Condition:
               StringEquals:
                 's3:x-amz-acl': 'bucket-owner-full-control'
@@ -629,6 +645,7 @@
         EnableLogFileValidation: true
         CloudWatchLogsLogGroupArn: !GetAtt 'TrailLogGroup.Arn'
         CloudWatchLogsRoleArn: !GetAtt 'TrailLogGroupRole.Arn'
+        KMSKeyId: !GetAtt CloudWatchLogsEncryptionKey.Arn
 
     ### CloudTrail LogGroup
     TrailLogGroup:

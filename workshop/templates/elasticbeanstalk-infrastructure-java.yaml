@@ -46,7 +46,7 @@ Parameters:
   EBSolutionStack:
       Type: String
       Description: "Elastic Beanstalk solution stack name"
-      Default: "64bit Amazon Linux 2 v3.2.5 running Corretto 11"  
+      Default: "64bit Amazon Linux 2023 v4.2.3 running Corretto 11"  
 
 Resources:
   EBServiceRole:
@@ -92,6 +92,7 @@ Resources:
         - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
         - arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker
         - arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
       RoleName: !Sub 'eb-ec2-role-${AWS::StackName}'
     Metadata:
       cfn_nag:
